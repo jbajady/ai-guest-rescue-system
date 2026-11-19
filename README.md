@@ -10,9 +10,11 @@ Python project for triaging stranded-guest tickets and enforcing safety-first ha
 
 ## Ticket types
 
+`TICKET_TYPES = ["rebooking", "refund", "safety"]` (in `src/ai_guest_rescue_system/triage.py`).
+
 | Ticket type | Problem | Agent | Allowed booking tools | Forbidden before hand-off |
 |---|---|---|---|---|
-| `safety_handoff` | Safety condition in `guest_message` (injury/medical need, threat/violence, nowhere safe to wait, unaccompanied minor, stated fear of a person). | Live Trust & Safety agent | `handoff_to_safety_agent` | `issue_refund`, `hold_booking` |
+| `safety` | Safety condition in `guest_message` (injury/medical need, threat/violence, nowhere safe to wait, unaccompanied minor, stated fear of a person). | Live Trust & Safety agent | `handoff_to_safety_agent` | `issue_refund`, `hold_booking` |
 | `rebooking` | Needs a comparable home for the remaining stay (AirCover rebooking support). | Rebooking support agent | `hold_booking` | — |
 | `refund` | Guest declines rebooking or no comparable home passes; refund due (one remedy per stay). | Refund support agent | `issue_refund` | — |
 
@@ -21,8 +23,9 @@ Safety is read from `guest_message` and takes priority over the requested action
 ## 60 Lisbon tickets sorted
 
 - Input: `data/lisbon_stranded_guest_tickets_2026-11-16.csv`
-- Sorted output: `data/lisbon_tickets_sorted.csv` (60 tickets, each with `ticket_type`, `agent`, `allowed_booking_tools`)
-- Counts: `rebooking` 34, `refund` 20, `safety_handoff` 6
+- **Assignments (each ticket ID -> one type):** `data/ticket_type_assignments.csv`
+- Detailed sorted output (with agent/tools): `data/lisbon_tickets_sorted.csv`
+- Counts: `rebooking` 34, `refund` 20, `safety` 6
 - Details: `docs/ticket-types.md`
 
 Regenerate:
@@ -32,9 +35,9 @@ PYTHONPATH=src python3 scripts/sort_lisbon_tickets.py
 
 ## Project layout
 
-- `src/ai_guest_rescue_system/` — package source (`ticket_types.py`, `triage.py`)
+- `src/ai_guest_rescue_system/` — package source (`triage.py` defines `TICKET_TYPES`, `ticket_types.py` has metadata)
 - `scripts/sort_lisbon_tickets.py` — sorts the 60 tickets into ticket types
-- `data/` — input tickets and `lisbon_tickets_sorted.csv`
+- `data/` — input tickets, `ticket_type_assignments.csv`, `lisbon_tickets_sorted.csv`
 - `docs/ticket-types.md` — ticket type definitions and routing
 - `tests/` — tests
 - `pyproject.toml` — packaging/config

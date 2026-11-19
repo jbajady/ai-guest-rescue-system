@@ -6,7 +6,8 @@ import csv
 from pathlib import Path
 from typing import Any
 
-from .ticket_types import TICKET_TYPES
+# Ticket types for the Lisbon stranded-guest incident.
+TICKET_TYPES = ["rebooking", "refund", "safety"]
 
 SAFETY_SIGNALS = {
     "injury_or_medical_need": (
@@ -51,6 +52,27 @@ SAFETY_SIGNALS = {
     ),
 }
 
+_TICKET_TYPE_META: dict[str, dict[str, Any]] = {
+    "safety": {
+        "label": "Safety handoff",
+        "agent": "Live Trust & Safety agent",
+        "allowed_booking_tools": ["handoff_to_safety_agent"],
+        "forbidden_before_handoff": ["issue_refund", "hold_booking"],
+    },
+    "rebooking": {
+        "label": "Rebooking",
+        "agent": "Rebooking support agent",
+        "allowed_booking_tools": ["hold_booking"],
+        "forbidden_before_handoff": [],
+    },
+    "refund": {
+        "label": "Refund",
+        "agent": "Refund support agent",
+        "allowed_booking_tools": ["issue_refund"],
+        "forbidden_before_handoff": [],
+    },
+}
+
 
 def detect_safety_signals(message: str) -> list[str]:
     """Return matching safety signal categories found in a guest message."""
@@ -78,24 +100,21 @@ def classify_ticket(ticket: dict[str, Any]) -> dict[str, Any]:
     safety = bool(signals) or str(ticket.get("expected_outcome", "")).strip().lower() == "safety"
 
     if safety:
-        type_key = "safety_handoff"
+        ticket_type = "safety"
     else:
         outcome = str(ticket.get("expected_outcome", "")).strip().lower()
-        if outcome == "refund":
-            type_key = "refund"
-        else:
-            type_key = "rebooking"
+        ticket_type = "refund" if outcome == "refund" else "rebooking"
 
-    info = TICKET_TYPES[type_key]
+    meta = _TICKET_TYPE_META[ticket_type]
     return {
         "ticket_id": ticket.get("ticket_id", ""),
         "guest_requested": ticket.get("guest_requested", ""),
         "expected_outcome": ticket.get("expected_outcome", ""),
-        "ticket_type": info.key,
-        "ticket_type_label": info.label,
-        "agent": info.agent,
-        "allowed_booking_tools": list(info.allowed_booking_tools),
-        "forbidden_before_handoff": list(info.forbidden_before_handoff),
+        "ticket_type": ticket_type,
+        "ticket_type_label": meta["label"],
+        "agent": meta["agent"],
+        "allowed_booking_tools": list(meta["allowed_booking_tools"]),
+        "forbidden_before_handoff": list(meta["forbidden_before_handoff"]),
         "safety_signals_detected": signals,
     }
 
@@ -139,4 +158,17 @@ def write_sorted_tickets(csv_path: str | Path, output_csv_path: str | Path) -> l
                     "safety_signals_detected": ";".join(row["safety_signals_detected"]),
                 }
             )
+    return rows
+
+
+def write_ticket_type_assignments(csv_path: str | Path, output_csv_path: str | Path) -> list[dict[str, Any]]:
+    """Write a simple file mapping each ticket ID to one ticket type."""
+    rows = classify_tickets(csv_path)
+    out_path = Path(output_csv_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["ticket_id", "ticket_type"])
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({"ticket_id": row["ticket_id"], "ticket_type": row["ticket_type"]})
     return rows

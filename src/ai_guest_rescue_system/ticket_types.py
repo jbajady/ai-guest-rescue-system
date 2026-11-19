@@ -16,9 +16,13 @@ class TicketTypeInfo:
     notes: str
 
 
+# Canonical ticket types (also listed as TICKET_TYPES in triage.py).
+TICKET_TYPE_ORDER = ("rebooking", "refund", "safety")
+TICKET_TYPE_LIST = list(TICKET_TYPE_ORDER)
+
 TICKET_TYPES: dict[str, TicketTypeInfo] = {
-    "safety_handoff": TicketTypeInfo(
-        key="safety_handoff",
+    "safety": TicketTypeInfo(
+        key="safety",
         label="Safety handoff",
         problem=(
             "Safety condition described in guest message (injury/medical need, threat or "
@@ -65,5 +69,3 @@ TICKET_TYPES: dict[str, TicketTypeInfo] = {
         ),
     ),
 }
-
-TICKET_TYPE_ORDER = ("safety_handoff", "rebooking", "refund")
